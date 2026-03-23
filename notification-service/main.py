@@ -54,6 +54,3 @@ async def send_notification(data: NotificationRequest):
         "message": data.message
     }
 
-# 3. IMPORTANTE PARA DOCKER: 
-# Asegúrate de que el comando de inicio en tu Dockerfile sea:
-# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
