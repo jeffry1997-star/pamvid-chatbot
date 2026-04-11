@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pamvid - Tienda de Productos</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🛒 Pamvid Tienda</h1>
+            <p class="tagline">Sistema de Venta de Productos - Cali, Colombia</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="products-section">
+            <h2>Catálogo de Productos</h2>
+            <div id="loading" class="loading">Cargando productos...</div>
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="products-grid" class="products-grid"></div>
+        </section>
+
+        <aside class="cart-section">
+            <h2>🛒 Carrito de Compras</h2>
+            <div id="cart-items" class="cart-items">
+                <p class="empty-cart">Tu carrito está vacío</p>
+            </div>
+            <div id="cart-total" class="cart-total" style="display: none;">
+                <p>Total: <span id="total-amount">$0.00</span></p>
+            </div>
+            <div class="cart-actions">
+                <input type="number" id="user-id" placeholder="ID de Usuario" value="1" min="1">
+                <select id="payment-method">
+                    <option value="PSE">PSE</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Transferencia">Transferencia</option>
+                </select>
+                <button id="checkout-btn" class="btn-primary" disabled>Finalizar Compra</button>
+            </div>
+            <div id="checkout-result" class="checkout-result" style="display: none;"></div>
+        </aside>
+    </main>
+
+    <section class="sales-history container">
+        <h2>📋 Historial de Compras</h2>
+        <div id="sales-list" class="sales-list">
+            <button id="load-sales-btn" class="btn-secondary">Cargar Mis Compras</button>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 Pamvid - Sistema de Logística y Mensajería</p>
+        <p class="version">Versión 1.0.0</p>
+    </footer>
+
+    <script>
+        // API Configuration - Connect to gateway service
+        const API_BASE = 'http://localhost:8080';
+        
+        // Cart state
+        let cart = [];
+        let products = [];
+
+        // Load products from product-service via gateway
+        async function loadProducts() {
+            const loadingEl = document.getElementById('loading');
+            const errorEl = document.getElementById('error');
+            const gridEl = document.getElementById('products-grid');
+            
+            try {
+                loadingEl.style.display = 'block';
+                errorEl.style.display = 'none';
+                gridEl.innerHTML = '';
+                
+                const response = await fetch(`${API_BASE}/product-service/all`);
+                
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+                
+                products = await response.json();
+                
+                if (products.length === 0) {
+                    gridEl.innerHTML = '<p class="no-products">No hay productos disponibles</p>';
+                    return;
+                }
+                
+                products.forEach(product => {
+                    const card = createProductCard(product);
+                    gridEl.appendChild(card);
+                });
+                
+                loadingEl.style.display = 'none';
+                
+                // Attach event listeners AFTER products are loaded
+                attachEventListeners();
+            } catch (error) {
+                loadingEl.style.display = 'none';
+                errorEl.textContent = `Error al cargar productos: ${error.message}. Asegúrate de que los servicios estén activos.`;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // Create product card element
+        function createProductCard(product) {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+                <div class="product-image">
+                    ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : '📦'}
+                </div>
+                <h3>${product.name}</h3>
+                <p class="description">${product.description || 'Sin descripción'}</p>
+                <p class="category">Categoría: ${product.category || 'General'}</p>
+                <p class="price">$${parseFloat(product.price).toFixed(2)}</p>
+                <p class="stock">Stock: ${product.stock} unidades</p>
+                <div class="quantity-control">
+                    <button class="btn-minus" data-id="${product.id}">-</button>
+                    <input type="number" id="qty-${product.id}" value="1" min="1" max="${product.stock}">
+                    <button class="btn-plus" data-id="${product.id}">+</button>
+                </div>
+                <button class="btn-add-cart" data-id="${product.id}" data-name="${product.name}" data-price="${product.price}" ${product.stock <= 0 ? 'disabled' : ''}>
+                    ${product.stock > 0 ? 'Agregar al Carrito' : 'Sin Stock'}
+                </button>
+            `;
+            return card;
+        }
+
+        // Add item to cart
+        function addToCart(productId, productName, productPrice, quantity) {
+            // Validate inputs
+            if (!productId || !productName || isNaN(productPrice) || productPrice <= 0) {
+                alert('Error: Datos del producto incompletos');
+                console.error('Invalid product data:', { productId, productName, productPrice, quantity });
+                return;
+            }
+            
+            // Ensure quantity is valid
+            if (!quantity || quantity < 1) {
+                quantity = 1;
+            }
+            
+            const existingItem = cart.find(item => item.product_id === productId);
+            
+            if (existingItem) {
+                existingItem.quantity += quantity;
+                existingItem.subtotal = existingItem.quantity * existingItem.unit_price;
+            } else {
+                cart.push({
+                    product_id: productId,
+                    product_name: productName,
+                    quantity: quantity,
+                    unit_price: productPrice,
+                    subtotal: productPrice * quantity
+                });
+            }
+            
+            console.log('Cart updated:', cart);
+            updateCartDisplay();
+        }
+
+        // Update cart display
+        function updateCartDisplay() {
+            const cartItemsEl = document.getElementById('cart-items');
+            const cartTotalEl = document.getElementById('cart-total');
+            const totalAmountEl = document.getElementById('total-amount');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            
+            if (cart.length === 0) {
+                cartItemsEl.innerHTML = '<p class="empty-cart">Tu carrito está vacío</p>';
+                cartTotalEl.style.display = 'none';
+                checkoutBtn.disabled = true;
+                return;
+            }
+            
+            let total = 0;
+            cartItemsEl.innerHTML = '';
+            
+            cart.forEach((item, index) => {
+                total += item.unit_price * item.quantity;
+                const itemEl = document.createElement('div');
+                itemEl.className = 'cart-item';
+                itemEl.innerHTML = `
+                    <div class="cart-item-info">
+                        <strong>${item.product_name}</strong>
+                        <p>$${(item.unit_price * item.quantity).toFixed(2)} (${item.quantity} x $${item.unit_price.toFixed(2)})</p>
+                    </div>
+                    <button class="btn-remove" data-index="${index}">✕</button>
+                `;
+                cartItemsEl.appendChild(itemEl);
+            });
+            
+            totalAmountEl.textContent = `$${total.toFixed(2)}`;
+            cartTotalEl.style.display = 'block';
+            checkoutBtn.disabled = false;
+        }
+
+        // Remove item from cart
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartDisplay();
+        }
+
+        // Process checkout - Create sale via sales-service
+        async function processCheckout() {
+            const userId = parseInt(document.getElementById('user-id').value);
+            const paymentMethod = document.getElementById('payment-method').value;
+            const resultEl = document.getElementById('checkout-result');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            
+            if (!userId || userId <= 0) {
+                resultEl.textContent = 'Por favor ingresa un ID de usuario válido';
+                resultEl.className = 'checkout-result error';
+                resultEl.style.display = 'block';
+                return;
+            }
+            
+            if (cart.length === 0) {
+                resultEl.textContent = 'El carrito está vacío';
+                resultEl.className = 'checkout-result error';
+                resultEl.style.display = 'block';
+                return;
+            }
+            
+            try {
+                checkoutBtn.disabled = true;
+                resultEl.style.display = 'none';
+                
+                const saleData = {
+                    user_id: userId,
+                    items: cart.map(item => ({
+                        product_id: item.product_id,
+                        quantity: item.quantity
+                    })),
+                    payment_method: paymentMethod
+                };
+                
+                const response = await fetch(`${API_BASE}/sales-service/create-sale`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(saleData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Error al procesar la venta');
+                }
+                
+                const saleResult = await response.json();
+                
+                resultEl.innerHTML = `
+                    <p class="success">✅ Venta procesada exitosamente!</p>
+                    <p>ID de Venta: ${saleResult.id}</p>
+                    <p>Total: $${saleResult.total.toFixed(2)}</p>
+                    <p>Estado: ${saleResult.status}</p>
+                `;
+                resultEl.className = 'checkout-result success';
+                resultEl.style.display = 'block';
+                
+                // Clear cart after successful checkout
+                cart = [];
+                updateCartDisplay();
+                
+                // Reload products to update stock
+                loadProducts();
+                
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+                resultEl.className = 'checkout-result error';
+                resultEl.style.display = 'block';
+                checkoutBtn.disabled = false;
+            }
+        }
+
+        // Load sales history
+        async function loadSalesHistory() {
+            const userId = parseInt(document.getElementById('user-id').value);
+            const salesListEl = document.getElementById('sales-list');
+            
+            if (!userId || userId <= 0) {
+                salesListEl.innerHTML = '<p class="error">Ingresa un ID de usuario válido</p>';
+                return;
+            }
+            
+            try {
+                salesListEl.innerHTML = '<p>Cargando compras...</p>';
+                
+                const response = await fetch(`${API_BASE}/sales-service/all?user_id=${userId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar historial');
+                }
+                
+                const sales = await response.json();
+                
+                if (sales.length === 0) {
+                    salesListEl.innerHTML = '<p>No tienes compras registradas</p><button id="load-sales-btn" class="btn-secondary">Actualizar</button>';
+                    attachEventListeners();
+                    return;
+                }
+                
+                salesListEl.innerHTML = '';
+                sales.forEach(sale => {
+                    const saleEl = document.createElement('div');
+                    saleEl.className = 'sale-item';
+                    saleEl.innerHTML = `
+                        <p><strong>Venta #${sale.id}</strong> - ${sale.created_at || 'Fecha unknown'}</p>
+                        <p>Total: $${sale.total.toFixed(2)} - Estado: ${sale.status}</p>
+                        <p>Método de pago: ${sale.payment_method}</p>
+                        <ul>
+                            ${sale.items.map(item => `<li>${item.product_name} x${item.quantity} = $${item.subtotal.toFixed(2)}</li>`).join('')}
+                        </ul>
+                    `;
+                    salesListEl.appendChild(saleEl);
+                });
+                
+                const loadMoreBtn = document.createElement('button');
+                loadMoreBtn.id = 'load-sales-btn';
+                loadMoreBtn.className = 'btn-secondary';
+                loadMoreBtn.textContent = 'Actualizar';
+                salesListEl.appendChild(loadMoreBtn);
+                attachEventListeners();
+                
+            } catch (error) {
+                salesListEl.innerHTML = `<p class="error">Error: ${error.message}</p><button id="load-sales-btn" class="btn-secondary">Reintentar</button>`;
+                attachEventListeners();
+            }
+        }
+
+        // Attach event listeners
+        function attachEventListeners() {
+            console.log('Attaching event listeners...');
+            
+            // Add to cart buttons - use direct onclick for reliability
+            const addToCartBtns = document.querySelectorAll('.btn-add-cart');
+            console.log('Found add to cart buttons:', addToCartBtns.length);
+            
+            addToCartBtns.forEach(btn => {
+                // Store data in the button element itself for reliable access
+                const productId = btn.getAttribute('data-id');
+                const productName = btn.getAttribute('data-name');
+                const productPrice = btn.getAttribute('data-price');
+                
+                console.log('Button data:', productId, productName, productPrice);
+                
+                // Remove any existing onclick
+                btn.onclick = null;
+                
+                // Use onclick instead of addEventListener for more reliable binding
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const qtyInput = document.getElementById('qty-' + productId);
+                    const qty = qtyInput ? parseInt(qtyInput.value) : 1;
+                    
+                    console.log('Adding to cart:', productId, productName, productPrice, qty);
+                    
+                    addToCart(
+                        parseInt(productId),
+                        productName,
+                        parseFloat(productPrice),
+                        qty
+                    );
+                    
+                    // Show feedback
+                    const btnText = btn.textContent;
+                    btn.textContent = '✓ Agregado!';
+                    setTimeout(function() {
+                        btn.textContent = btnText;
+                    }, 1000);
+                };
+            });
+            
+            // Quantity buttons
+            document.querySelectorAll('.btn-minus').forEach(btn => {
+                const productId = btn.getAttribute('data-id');
+                btn.onclick = function() {
+                    const qtyInput = document.getElementById('qty-' + productId);
+                    if (qtyInput && parseInt(qtyInput.value) > 1) {
+                        qtyInput.value = parseInt(qtyInput.value) - 1;
+                    }
+                };
+            });
+            
+            document.querySelectorAll('.btn-plus').forEach(btn => {
+                const productId = btn.getAttribute('data-id');
+                btn.onclick = function() {
+                    const qtyInput = document.getElementById('qty-' + productId);
+                    if (qtyInput && parseInt(qtyInput.value) < parseInt(qtyInput.max)) {
+                        qtyInput.value = parseInt(qtyInput.value) + 1;
+                    }
+                };
+            });
+            
+            console.log('Event listeners attached successfully');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, loading products...');
+            loadProducts();
+            // Also attach listeners for static elements
+            setTimeout(attachEventListeners, 100);
+        });
+    </script>
+</body>
+</html>
