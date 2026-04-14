@@ -1,4 +1,5 @@
 import logging
+import os
 from fastapi import FastAPI, HTTPException
 from databases import Database
 from pydantic import BaseModel
@@ -9,7 +10,7 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = "postgresql://user:pass@db-products:5432/products_db"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@db-products:5432/products_db")
 database = Database(DATABASE_URL)
 
 app = FastAPI(title="Product Service", description="Gestión de Productos - Pamvid Ventas")
