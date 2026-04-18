@@ -9,14 +9,96 @@
 <body>
     <header>
         <div class="container">
-            <h1>🛒 Pamvid Tienda</h1>
-            <p class="tagline">Sistema de Venta de Productos - Cali, Colombia</p>
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>🛒 Pamvid Tienda</h1>
+                    <p class="tagline">Sistema de Venta de Productos - Cali, Colombia</p>
+                </div>
+                <div class="user-section">
+                    <div id="user-guest" class="user-guest">
+                        <button id="login-btn" class="btn-login">🔑 Iniciar Sesión</button>
+                        <button id="register-btn" class="btn-register">📝 Registrarse</button>
+                    </div>
+                    <div id="user-logged" class="user-logged" style="display: none;">
+                        <span class="user-name">👤 <span id="display-name">Usuario</span></span>
+                        <button id="logout-btn" class="btn-logout">Salir</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
+
+    <!-- Login/Register Modal -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="modal-close">&times;</span>
+            
+            <div id="login-form-container">
+                <h2>🔐 Iniciar Sesión</h2>
+                <div id="login-form">
+                    <div class="form-group">
+                        <label for="login-email">Email:</label>
+                        <input type="email" id="login-email" placeholder="tu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Contraseña:</label>
+                        <input type="password" id="login-password" placeholder="••••••••">
+                    </div>
+                    <!-- FIX: mensaje de error visible en el modal -->
+                    <div id="login-error" style="color: red; font-size: 13px; margin-bottom: 8px; display: none;"></div>
+                    <button type="button" id="login-submit-btn" class="btn-primary">Iniciar Sesión</button>
+                    <p class="form-switch">¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a></p>
+                </div>
+            </div>
+            
+            <div id="register-form-container" style="display: none;">
+                <h2>📝 Crear Cuenta</h2>
+                <div id="register-form">
+                    <div class="form-group">
+                        <label for="register-name">Nombre:</label>
+                        <input type="text" id="register-name" placeholder="Tu nombre completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">Email:</label>
+                        <input type="email" id="register-email" placeholder="tu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-phone">Teléfono (opcional):</label>
+                        <input type="text" id="register-phone" placeholder="+57 300 123 4567">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Contraseña:</label>
+                        <input type="password" id="register-password" placeholder="••••••••">
+                    </div>
+                    <!-- FIX: mensaje de error visible en el modal -->
+                    <div id="register-error" style="color: red; font-size: 13px; margin-bottom: 8px; display: none;"></div>
+                    <button type="button" id="register-submit-btn" class="btn-primary">Crear Cuenta</button>
+                    <p class="form-switch">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <main class="container">
         <section class="products-section">
             <h2>Catálogo de Productos</h2>
+            
+            <div class="products-controls">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="🔍 Buscar productos...">
+                </div>
+                <div class="category-filter">
+                    <select id="category-select">
+                        <option value="">📂 Todas las categorías</option>
+                        <option value="Electrónica">Electrónica</option>
+                        <option value="Ropa">Ropa</option>
+                        <option value="Alimentos">Alimentos</option>
+                        <option value="Hogar">Hogar</option>
+                        <option value="Deportes">Deportes</option>
+                    </select>
+                </div>
+            </div>
+            
             <div id="loading" class="loading">Cargando productos...</div>
             <div id="error" class="error" style="display: none;"></div>
             <div id="products-grid" class="products-grid"></div>
@@ -28,9 +110,24 @@
                 <p class="empty-cart">Tu carrito está vacío</p>
             </div>
             <div id="cart-total" class="cart-total" style="display: none;">
-                <p>Total: <span id="total-amount">$0.00</span></p>
+                <div class="subtotal-row">
+                    <span>Subtotal:</span>
+                    <span id="subtotal-amount">$0.00</span>
+                </div>
+                <div class="shipping-row">
+                    <span>🚚 Envío:</span>
+                    <span id="shipping-amount">Calculando...</span>
+                </div>
+                <div class="shipping-input">
+                    <input type="text" id="shipping-zip" placeholder="Ingresa tu ciudad/zona">
+                </div>
+                <div class="total-row">
+                    <span>Total:</span>
+                    <span id="total-amount">$0.00</span>
+                </div>
             </div>
             <div class="cart-actions">
+                <!-- FIX: el user_id se gestiona internamente, este input es solo visual/fallback -->
                 <input type="number" id="user-id" placeholder="ID de Usuario" value="1" min="1">
                 <select id="payment-method">
                     <option value="PSE">PSE</option>
@@ -52,51 +149,290 @@
     </section>
 
     <footer>
-        <p>&copy; 2026 Pamvid - Sistema de Logística y Mensajería</p>
-        <p class="version">Versión 1.0.0</p>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>📍 Pamvid</h3>
+                <p>Sistema de Logística y Mensajería</p>
+                <p>Cali, Valle del Cauca, Colombia</p>
+            </div>
+            <div class="footer-section">
+                <h3>📞 Contacto</h3>
+                <p>WhatsApp: +57 300 123 4567</p>
+                <p>Email: info@pamvid.com</p>
+            </div>
+            <div class="footer-section">
+                <h3>🕐 Horario</h3>
+                <p>Lunes a Viernes: 8:00 AM - 6:00 PM</p>
+                <p>Sábados: 9:00 AM - 2:00 PM</p>
+            </div>
+            <div class="footer-section">
+                <h3>🚚 Servicios</h3>
+                <p>• Envíos locales y nacionales</p>
+                <p>• Seguimiento en tiempo real</p>
+                <p>• Entrega en 24-48 horas</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Pamvid - Sistema de Logística y Mensajería. Todos los derechos reservados.</p>
+            <p class="version">Versión 1.0.0 | <a href="#">Términos y Condiciones</a> | <a href="#">Política de Privacidad</a></p>
+        </div>
     </footer>
 
+    <div id="toast-container" class="toast-container"></div>
+
     <script>
-        // API Configuration - Connect to gateway service
         const API_BASE = 'http://localhost:8080';
-        
-        // Cart state
+
         let cart = [];
         let products = [];
 
-        // Load products from product-service via gateway
+        // =============================================
+        // FIX 1: Estado de usuario centralizado
+        // currentUser guarda el objeto completo del usuario logueado
+        // authToken guarda el JWT para enviarlo en cada petición protegida
+        // =============================================
+        let currentUser = null;
+        let authToken = localStorage.getItem('auth_token');
+
+        // Helper: construye headers con JWT si existe
+        function authHeaders(extraHeaders = {}) {
+            const headers = { 'Content-Type': 'application/json', ...extraHeaders };
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            return headers;
+        }
+
+        // Verifica sesión existente al cargar la página
+        async function checkAuth() {
+            if (!authToken) return;
+            try {
+                const response = await fetch(`${API_BASE}/user-service/me`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    setLoggedInUser(user);
+                } else {
+                    clearSession();
+                }
+            } catch (e) {
+                clearSession();
+            }
+        }
+
+        function clearSession() {
+            localStorage.removeItem('auth_token');
+            authToken = null;
+            currentUser = null;
+        }
+
+        // =============================================
+        // FIX 2: setLoggedInUser sincroniza currentUser Y el input #user-id
+        // =============================================
+        function setLoggedInUser(user) {
+            currentUser = user;
+            authToken = localStorage.getItem('auth_token'); // re-sync por si acaso
+            document.getElementById('user-guest').style.display = 'none';
+            document.getElementById('user-logged').style.display = 'flex';
+            document.getElementById('display-name').textContent = user.name;
+            // Sincronizar el input visible con el id real del usuario
+            document.getElementById('user-id').value = user.id;
+        }
+
+        function setGuestUser() {
+            currentUser = null;
+            document.getElementById('user-guest').style.display = 'flex';
+            document.getElementById('user-logged').style.display = 'none';
+            document.getElementById('user-id').value = '1';
+        }
+
+        // =============================================
+        // Auth modal
+        // =============================================
+        function openAuthModal() {
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        // FIX 3: closeAuthModal limpia campos manualmente (los contenedores son <div>, no <form>)
+        function closeAuthModal() {
+            document.getElementById('auth-modal').style.display = 'none';
+            // Limpiar todos los campos del modal manualmente
+            ['login-email', 'login-password',
+             'register-name', 'register-email', 'register-phone', 'register-password'
+            ].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            // Ocultar mensajes de error
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('register-error').style.display = 'none';
+        }
+
+        function showLoginForm() {
+            document.getElementById('login-form-container').style.display = 'block';
+            document.getElementById('register-form-container').style.display = 'none';
+        }
+
+        function showRegisterForm() {
+            document.getElementById('login-form-container').style.display = 'none';
+            document.getElementById('register-form-container').style.display = 'block';
+        }
+
+        // =============================================
+        // Login
+        // =============================================
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+
+            errorEl.style.display = 'none';
+
+            if (!email || !password) {
+                errorEl.textContent = 'Por favor completa todos los campos';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/user-service/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Error al iniciar sesión');
+                }
+
+                const data = await response.json();
+                // FIX: guardar token ANTES de llamar setLoggedInUser
+                authToken = data.access_token;
+                localStorage.setItem('auth_token', authToken);
+                setLoggedInUser(data.user);
+                closeAuthModal();
+                showToast('¡Bienvenido, ' + data.user.name + '!', 'success');
+
+            } catch (error) {
+                errorEl.textContent = error.message;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // =============================================
+        // Register
+        // =============================================
+        async function handleRegister() {
+            const name = document.getElementById('register-name').value.trim();
+            const email = document.getElementById('register-email').value.trim();
+            const phone = document.getElementById('register-phone').value.trim();
+            const password = document.getElementById('register-password').value;
+            const errorEl = document.getElementById('register-error');
+
+            errorEl.style.display = 'none';
+
+            if (!name || !email || !password) {
+                errorEl.textContent = 'Por favor completa todos los campos requeridos';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const body = { name, email, password };
+                if (phone) body.phone = phone;
+
+                const response = await fetch(`${API_BASE}/user-service/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Error al registrar');
+                }
+
+                showToast('✅ Cuenta creada. Ahora inicia sesión.', 'success');
+                showLoginForm();
+                // Pre-llenar el email en el login para facilitar el acceso
+                document.getElementById('login-email').value = email;
+
+            } catch (error) {
+                errorEl.textContent = error.message;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // Logout
+        function handleLogout() {
+            clearSession();
+            setGuestUser();
+            cart = [];
+            updateCartDisplay();
+            showToast('Sesión cerrada correctamente', 'info');
+        }
+
+        // =============================================
+        // Inicialización de event listeners de auth
+        // =============================================
+        document.addEventListener('DOMContentLoaded', function () {
+            checkAuth();
+
+            document.getElementById('login-btn').onclick = openAuthModal;
+            document.getElementById('register-btn').onclick = function () { openAuthModal(); showRegisterForm(); };
+            document.getElementById('modal-close').onclick = closeAuthModal;
+            document.getElementById('show-register').onclick = function (e) { e.preventDefault(); showRegisterForm(); };
+            document.getElementById('show-login').onclick = function (e) { e.preventDefault(); showLoginForm(); };
+            document.getElementById('logout-btn').onclick = handleLogout;
+            document.getElementById('login-submit-btn').onclick = handleLogin;
+            document.getElementById('register-submit-btn').onclick = handleRegister;
+
+            // Cerrar modal al hacer clic fuera
+            window.onclick = function (e) {
+                const modal = document.getElementById('auth-modal');
+                if (modal && e.target === modal) closeAuthModal();
+            };
+
+            // Soporte para Enter en los inputs del modal
+            document.getElementById('login-password').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') handleLogin();
+            });
+            document.getElementById('register-password').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') handleRegister();
+            });
+        });
+
+        // =============================================
+        // Productos
+        // =============================================
         async function loadProducts() {
             const loadingEl = document.getElementById('loading');
             const errorEl = document.getElementById('error');
             const gridEl = document.getElementById('products-grid');
-            
+
             try {
                 loadingEl.style.display = 'block';
                 errorEl.style.display = 'none';
                 gridEl.innerHTML = '';
-                
+
                 const response = await fetch(`${API_BASE}/product-service/all`);
-                
-                if (!response.ok) {
-                    throw new Error(`Error del servidor: ${response.status}`);
-                }
-                
+
+                if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
+
                 products = await response.json();
-                
+
                 if (products.length === 0) {
                     gridEl.innerHTML = '<p class="no-products">No hay productos disponibles</p>';
+                    loadingEl.style.display = 'none';
                     return;
                 }
-                
-                products.forEach(product => {
-                    const card = createProductCard(product);
-                    gridEl.appendChild(card);
-                });
-                
+
+                products.forEach(product => gridEl.appendChild(createProductCard(product)));
                 loadingEl.style.display = 'none';
-                
-                // Attach event listeners AFTER products are loaded
                 attachEventListeners();
+
             } catch (error) {
                 loadingEl.style.display = 'none';
                 errorEl.textContent = `Error al cargar productos: ${error.message}. Asegúrate de que los servicios estén activos.`;
@@ -104,15 +440,38 @@
             }
         }
 
-        // Create product card element
+        function filterProducts() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const categoryFilter = document.getElementById('category-select').value;
+            const gridEl = document.getElementById('products-grid');
+
+            const filtered = products.filter(product => {
+                const matchesSearch = product.name.toLowerCase().includes(searchTerm) ||
+                    (product.description && product.description.toLowerCase().includes(searchTerm));
+                const matchesCategory = !categoryFilter || product.category === categoryFilter;
+                return matchesSearch && matchesCategory;
+            });
+
+            gridEl.innerHTML = '';
+            if (filtered.length === 0) {
+                gridEl.innerHTML = '<p class="no-products">No se encontraron productos</p>';
+                return;
+            }
+            filtered.forEach(product => gridEl.appendChild(createProductCard(product)));
+            attachEventListeners();
+        }
+
         function createProductCard(product) {
             const card = document.createElement('div');
             card.className = 'product-card';
+            const rating = product.rating || 0;
+            const stars = '★'.repeat(Math.floor(rating)) + '☆'.repeat(5 - Math.floor(rating));
             card.innerHTML = `
                 <div class="product-image">
                     ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : '📦'}
                 </div>
                 <h3>${product.name}</h3>
+                <div class="product-rating">${stars} <span>(${rating.toFixed(1)})</span></div>
                 <p class="description">${product.description || 'Sin descripción'}</p>
                 <p class="category">Categoría: ${product.category || 'General'}</p>
                 <p class="price">$${parseFloat(product.price).toFixed(2)}</p>
@@ -129,22 +488,17 @@
             return card;
         }
 
-        // Add item to cart
+        // =============================================
+        // Carrito
+        // =============================================
         function addToCart(productId, productName, productPrice, quantity) {
-            // Validate inputs
             if (!productId || !productName || isNaN(productPrice) || productPrice <= 0) {
-                alert('Error: Datos del producto incompletos');
-                console.error('Invalid product data:', { productId, productName, productPrice, quantity });
+                showToast('Error: Datos del producto incompletos', 'error');
                 return;
             }
-            
-            // Ensure quantity is valid
-            if (!quantity || quantity < 1) {
-                quantity = 1;
-            }
-            
+            if (!quantity || quantity < 1) quantity = 1;
+
             const existingItem = cart.find(item => item.product_id === productId);
-            
             if (existingItem) {
                 existingItem.quantity += quantity;
                 existingItem.subtotal = existingItem.quantity * existingItem.unit_price;
@@ -157,102 +511,186 @@
                     subtotal: productPrice * quantity
                 });
             }
-            
-            console.log('Cart updated:', cart);
             updateCartDisplay();
+            showToast(`"${productName}" agregado al carrito`, 'success');
         }
 
-        // Update cart display
         function updateCartDisplay() {
             const cartItemsEl = document.getElementById('cart-items');
             const cartTotalEl = document.getElementById('cart-total');
+            const subtotalEl = document.getElementById('subtotal-amount');
             const totalAmountEl = document.getElementById('total-amount');
             const checkoutBtn = document.getElementById('checkout-btn');
-            
+
             if (cart.length === 0) {
                 cartItemsEl.innerHTML = '<p class="empty-cart">Tu carrito está vacío</p>';
                 cartTotalEl.style.display = 'none';
                 checkoutBtn.disabled = true;
                 return;
             }
-            
-            let total = 0;
+
+            let subtotal = 0;
             cartItemsEl.innerHTML = '';
-            
+
             cart.forEach((item, index) => {
-                total += item.unit_price * item.quantity;
+                subtotal += item.unit_price * item.quantity;
                 const itemEl = document.createElement('div');
                 itemEl.className = 'cart-item';
                 itemEl.innerHTML = `
                     <div class="cart-item-info">
                         <strong>${item.product_name}</strong>
-                        <p>$${(item.unit_price * item.quantity).toFixed(2)} (${item.quantity} x $${item.unit_price.toFixed(2)})</p>
+                        <div class="cart-item-controls">
+                            <button class="btn-qty-minus" data-index="${index}">-</button>
+                            <span class="qty-value">${item.quantity}</span>
+                            <button class="btn-qty-plus" data-index="${index}">+</button>
+                            <span class="item-price">$${(item.unit_price * item.quantity).toFixed(2)}</span>
+                        </div>
                     </div>
                     <button class="btn-remove" data-index="${index}">✕</button>
                 `;
                 cartItemsEl.appendChild(itemEl);
             });
-            
+
+            const shipping = calculateShipping();
+            const total = subtotal + shipping;
+
+            subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
             totalAmountEl.textContent = `$${total.toFixed(2)}`;
             cartTotalEl.style.display = 'block';
             checkoutBtn.disabled = false;
+
+            // Re-adjuntar listeners de los botones del carrito
+            document.querySelectorAll('.btn-qty-minus').forEach(btn => {
+                btn.onclick = () => updateCartItemQuantity(parseInt(btn.getAttribute('data-index')), -1);
+            });
+            document.querySelectorAll('.btn-qty-plus').forEach(btn => {
+                btn.onclick = () => updateCartItemQuantity(parseInt(btn.getAttribute('data-index')), 1);
+            });
+            document.querySelectorAll('.btn-remove').forEach(btn => {
+                btn.onclick = () => removeFromCart(parseInt(btn.getAttribute('data-index')));
+            });
         }
 
-        // Remove item from cart
+        function calculateShipping() {
+            const cityInput = document.getElementById('shipping-zip').value.toLowerCase().trim();
+            const shippingEl = document.getElementById('shipping-amount');
+
+            const localCities = ['cali', 'yumbo', 'palmira', 'buenaventura', 'jamundí'];
+            const nationalCities = ['bogotá', 'bogota', 'medellín', 'medellin', 'barranquilla', 'cartagena', 'cúcuta', 'cucuta'];
+
+            if (cityInput === '') {
+                shippingEl.textContent = 'Ingresa tu ciudad';
+                return 0;
+            }
+            if (localCities.some(city => cityInput.includes(city))) {
+                shippingEl.textContent = '$5,000 (24h)';
+                return 5000;
+            } else if (nationalCities.some(city => cityInput.includes(city))) {
+                shippingEl.textContent = '$12,000 (48h)';
+                return 12000;
+            } else {
+                shippingEl.textContent = '$18,000 (3-5 días)';
+                return 18000;
+            }
+        }
+
+        function updateCartItemQuantity(index, change) {
+            if (cart[index]) {
+                const newQty = cart[index].quantity + change;
+                if (newQty > 0) {
+                    cart[index].quantity = newQty;
+                    cart[index].subtotal = newQty * cart[index].unit_price;
+                }
+                updateCartDisplay();
+            }
+        }
+
         function removeFromCart(index) {
             cart.splice(index, 1);
             updateCartDisplay();
+            showToast('Producto eliminado del carrito', 'info');
         }
 
-        // Process checkout - Create sale via sales-service
+        // =============================================
+        // Toast
+        // =============================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || 'ℹ'}</span>
+                <span class="toast-message">${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('toast-show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // =============================================
+        // FIX 4: processCheckout usa currentUser.id y envía el JWT
+        // =============================================
         async function processCheckout() {
-            const userId = parseInt(document.getElementById('user-id').value);
+            // Prioridad: usuario logueado > input manual
+            console.log('=== processCheckout called ===');
+            console.log('currentUser:', currentUser);
+            console.log('authToken:', authToken);
+            console.log('user-id input value:', document.getElementById('user-id').value);
+            
+            const userId = currentUser ? currentUser.id : parseInt(document.getElementById('user-id').value);
+            const userName = currentUser ? (currentUser.name || currentUser.name) : '';
+            console.log('userId:', userId, 'userName:', userName);
+            
             const paymentMethod = document.getElementById('payment-method').value;
             const resultEl = document.getElementById('checkout-result');
             const checkoutBtn = document.getElementById('checkout-btn');
-            
+
             if (!userId || userId <= 0) {
-                resultEl.textContent = 'Por favor ingresa un ID de usuario válido';
-                resultEl.className = 'checkout-result error';
-                resultEl.style.display = 'block';
+                showToast('Debes iniciar sesión para comprar', 'error');
+                openAuthModal();
                 return;
             }
-            
+
             if (cart.length === 0) {
-                resultEl.textContent = 'El carrito está vacío';
-                resultEl.className = 'checkout-result error';
-                resultEl.style.display = 'block';
+                showToast('El carrito está vacío', 'error');
                 return;
             }
-            
+
             try {
                 checkoutBtn.disabled = true;
                 resultEl.style.display = 'none';
-                
+
                 const saleData = {
                     user_id: userId,
+                    user_name: userName,
                     items: cart.map(item => ({
                         product_id: item.product_id,
                         quantity: item.quantity
                     })),
                     payment_method: paymentMethod
                 };
-                
+
+                console.log('saleData:', saleData);
+
+                // FIX: enviar JWT en el header
                 const response = await fetch(`${API_BASE}/sales-service/create-sale`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: authHeaders(),
                     body: JSON.stringify(saleData)
                 });
-                
+
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.detail || 'Error al procesar la venta');
                 }
-                
+
                 const saleResult = await response.json();
-                
+
                 resultEl.innerHTML = `
                     <p class="success">✅ Venta procesada exitosamente!</p>
                     <p>ID de Venta: ${saleResult.id}</p>
@@ -261,151 +699,159 @@
                 `;
                 resultEl.className = 'checkout-result success';
                 resultEl.style.display = 'block';
-                
-                // Clear cart after successful checkout
+
                 cart = [];
                 updateCartDisplay();
-                
-                // Reload products to update stock
                 loadProducts();
-                
+
             } catch (error) {
                 resultEl.textContent = `Error: ${error.message}`;
                 resultEl.className = 'checkout-result error';
                 resultEl.style.display = 'block';
-                checkoutBtn.disabled = false;
+            } finally {
+                // FIX 5: usar finally para siempre rehabilitar el botón si hay items
+                if (cart.length > 0) checkoutBtn.disabled = false;
             }
         }
 
-        // Load sales history
+        // =============================================
+        // FIX 6: loadSalesHistory usa currentUser.id y envía el JWT
+        // =============================================
         async function loadSalesHistory() {
-            const userId = parseInt(document.getElementById('user-id').value);
+            const userId = currentUser ? currentUser.id : parseInt(document.getElementById('user-id').value);
             const salesListEl = document.getElementById('sales-list');
-            
+
             if (!userId || userId <= 0) {
-                salesListEl.innerHTML = '<p class="error">Ingresa un ID de usuario válido</p>';
+                salesListEl.innerHTML = `
+                    <p class="error">Debes iniciar sesión para ver tu historial</p>
+                    <button id="load-sales-btn" class="btn-secondary">Reintentar</button>
+                `;
+                attachEventListeners();
+                openAuthModal();
                 return;
             }
-            
+
             try {
                 salesListEl.innerHTML = '<p>Cargando compras...</p>';
-                
-                const response = await fetch(`${API_BASE}/sales-service/all?user_id=${userId}`);
-                
-                if (!response.ok) {
-                    throw new Error('Error al cargar historial');
-                }
-                
+
+                // FIX: enviar JWT en el header
+                const response = await fetch(`${API_BASE}/sales-service/all?user_id=${userId}`, {
+                    headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+                });
+
+                if (!response.ok) throw new Error('Error al cargar historial');
+
                 const sales = await response.json();
-                
+
                 if (sales.length === 0) {
-                    salesListEl.innerHTML = '<p>No tienes compras registradas</p><button id="load-sales-btn" class="btn-secondary">Actualizar</button>';
+                    salesListEl.innerHTML = `
+                        <p>No tienes compras registradas aún.</p>
+                        <button id="load-sales-btn" class="btn-secondary">Actualizar</button>
+                    `;
                     attachEventListeners();
                     return;
                 }
-                
+
                 salesListEl.innerHTML = '';
                 sales.forEach(sale => {
                     const saleEl = document.createElement('div');
                     saleEl.className = 'sale-item';
+                    // Formatear fecha legible
+                    const fecha = sale.created_at
+                        ? new Date(sale.created_at).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+                        : 'Fecha desconocida';
                     saleEl.innerHTML = `
-                        <p><strong>Venta #${sale.id}</strong> - ${sale.created_at || 'Fecha unknown'}</p>
-                        <p>Total: $${sale.total.toFixed(2)} - Estado: ${sale.status}</p>
-                        <p>Método de pago: ${sale.payment_method}</p>
+                        <p><strong>Venta #${sale.id}</strong> — ${fecha}</p>
+                        <p>Vendedor: ${sale.user_name || 'N/A'} | Total: $${sale.total.toFixed(2)} | Estado: <strong>${sale.status}</strong> | Pago: ${sale.payment_method}</p>
                         <ul>
-                            ${sale.items.map(item => `<li>${item.product_name} x${item.quantity} = $${item.subtotal.toFixed(2)}</li>`).join('')}
+                            ${sale.items.map(item => `
+                                <li>${item.product_name} × ${item.quantity} = $${item.subtotal.toFixed(2)}</li>
+                            `).join('')}
                         </ul>
                     `;
                     salesListEl.appendChild(saleEl);
                 });
-                
-                const loadMoreBtn = document.createElement('button');
-                loadMoreBtn.id = 'load-sales-btn';
-                loadMoreBtn.className = 'btn-secondary';
-                loadMoreBtn.textContent = 'Actualizar';
-                salesListEl.appendChild(loadMoreBtn);
+
+                const updateBtn = document.createElement('button');
+                updateBtn.id = 'load-sales-btn';
+                updateBtn.className = 'btn-secondary';
+                updateBtn.textContent = 'Actualizar';
+                salesListEl.appendChild(updateBtn);
                 attachEventListeners();
-                
+                showToast(`${sales.length} compra(s) cargada(s)`, 'success');
+
             } catch (error) {
-                salesListEl.innerHTML = `<p class="error">Error: ${error.message}</p><button id="load-sales-btn" class="btn-secondary">Reintentar</button>`;
+                salesListEl.innerHTML = `
+                    <p class="error">Error: ${error.message}</p>
+                    <button id="load-sales-btn" class="btn-secondary">Reintentar</button>
+                `;
                 attachEventListeners();
+                showToast('Error al cargar compras', 'error');
             }
         }
 
-        // Attach event listeners
+        // =============================================
+        // Event listeners globales
+        // =============================================
         function attachEventListeners() {
-            console.log('Attaching event listeners...');
-            
-            // Add to cart buttons - use direct onclick for reliability
-            const addToCartBtns = document.querySelectorAll('.btn-add-cart');
-            console.log('Found add to cart buttons:', addToCartBtns.length);
-            
-            addToCartBtns.forEach(btn => {
-                // Store data in the button element itself for reliable access
+            // Botones agregar al carrito
+            document.querySelectorAll('.btn-add-cart').forEach(btn => {
                 const productId = btn.getAttribute('data-id');
                 const productName = btn.getAttribute('data-name');
                 const productPrice = btn.getAttribute('data-price');
-                
-                console.log('Button data:', productId, productName, productPrice);
-                
-                // Remove any existing onclick
-                btn.onclick = null;
-                
-                // Use onclick instead of addEventListener for more reliable binding
-                btn.onclick = function(e) {
+                btn.onclick = function (e) {
                     e.preventDefault();
-                    e.stopPropagation();
-                    
                     const qtyInput = document.getElementById('qty-' + productId);
                     const qty = qtyInput ? parseInt(qtyInput.value) : 1;
-                    
-                    console.log('Adding to cart:', productId, productName, productPrice, qty);
-                    
-                    addToCart(
-                        parseInt(productId),
-                        productName,
-                        parseFloat(productPrice),
-                        qty
-                    );
-                    
-                    // Show feedback
-                    const btnText = btn.textContent;
+                    addToCart(parseInt(productId), productName, parseFloat(productPrice), qty);
+                    const original = btn.textContent;
                     btn.textContent = '✓ Agregado!';
-                    setTimeout(function() {
-                        btn.textContent = btnText;
-                    }, 1000);
+                    setTimeout(() => { btn.textContent = original; }, 1000);
                 };
             });
-            
-            // Quantity buttons
+
+            // Botones cantidad en tarjetas de producto
             document.querySelectorAll('.btn-minus').forEach(btn => {
                 const productId = btn.getAttribute('data-id');
-                btn.onclick = function() {
+                btn.onclick = function () {
                     const qtyInput = document.getElementById('qty-' + productId);
-                    if (qtyInput && parseInt(qtyInput.value) > 1) {
+                    if (qtyInput && parseInt(qtyInput.value) > 1)
                         qtyInput.value = parseInt(qtyInput.value) - 1;
-                    }
                 };
             });
-            
             document.querySelectorAll('.btn-plus').forEach(btn => {
                 const productId = btn.getAttribute('data-id');
-                btn.onclick = function() {
+                btn.onclick = function () {
                     const qtyInput = document.getElementById('qty-' + productId);
-                    if (qtyInput && parseInt(qtyInput.value) < parseInt(qtyInput.max)) {
+                    if (qtyInput && parseInt(qtyInput.value) < parseInt(qtyInput.max))
                         qtyInput.value = parseInt(qtyInput.value) + 1;
-                    }
                 };
             });
-            
-            console.log('Event listeners attached successfully');
+
+            // Búsqueda y filtro
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.oninput = filterProducts;
+            const categorySelect = document.getElementById('category-select');
+            if (categorySelect) categorySelect.onchange = filterProducts;
+
+            // Input de ciudad/envío
+            const shippingInput = document.getElementById('shipping-zip');
+            if (shippingInput) shippingInput.oninput = () => updateCartDisplay();
+
+            // Botón checkout
+            const checkoutBtn = document.getElementById('checkout-btn');
+            if (checkoutBtn) checkoutBtn.onclick = (e) => { e.preventDefault(); processCheckout(); };
+
+            // Botón historial de compras
+            const loadSalesBtn = document.getElementById('load-sales-btn');
+            if (loadSalesBtn) loadSalesBtn.onclick = (e) => { e.preventDefault(); loadSalesHistory(); };
         }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Page loaded, loading products...');
+        // =============================================
+        // Inicialización
+        // =============================================
+        document.addEventListener('DOMContentLoaded', function () {
             loadProducts();
-            // Also attach listeners for static elements
             setTimeout(attachEventListeners, 100);
         });
     </script>

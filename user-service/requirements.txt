@@ -3,7 +3,7 @@ uvicorn
 databases[postgresql]
 asyncpg
 psycopg2-binary
-passlib[bcrypt]
+bcrypt
 python-jose[cryptography]
 pydantic[email]
 httpx
