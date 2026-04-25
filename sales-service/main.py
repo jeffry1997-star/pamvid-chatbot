@@ -10,6 +10,7 @@ from typing import List, Optional
 from datetime import datetime
 import asyncio
 import httpx
+import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -308,14 +309,21 @@ async def list_sales(user_id: int = None, limit: int = 50):
     result = []
     for sale in sales_list:
         items = []
-        if sale["items"]:
-            for item in sale["items"]:
-                if item and item.get("product_id"):
+        raw_items = sale["items"]
+        # FIX: json_agg puede devolver string JSON en lugar de lista Python
+        if isinstance(raw_items, str):
+            try:
+                raw_items = json.loads(raw_items)
+            except json.JSONDecodeError:
+                raw_items = None
+        if raw_items:
+            for item in raw_items:
+                if item and isinstance(item, dict) and item.get("product_id"):
                     items.append(SaleItemResponse(**item))
         result.append(SaleResponse(
             id=sale["id"],
             user_id=sale["user_id"],
-            user_name=sale.get("user_name", ""),
+            user_name=sale["user_name"] if sale["user_name"] else "",
             items=items,
             total=float(sale["total"]),
             payment_method=sale["payment_method"],
@@ -347,15 +355,22 @@ async def get_sale(sale_id: int):
         raise HTTPException(status_code=404, detail="Venta no encontrada")
 
     items = []
-    if sale["items"]:
-        for item in sale["items"]:
-            if item and item.get("product_id"):
+    raw_items = sale["items"]
+    # FIX: json_agg puede devolver string JSON en lugar de lista Python
+    if isinstance(raw_items, str):
+        try:
+            raw_items = json.loads(raw_items)
+        except json.JSONDecodeError:
+            raw_items = None
+    if raw_items:
+        for item in raw_items:
+            if item and isinstance(item, dict) and item.get("product_id"):
                 items.append(SaleItemResponse(**item))
 
     return SaleResponse(
         id=sale["id"],
         user_id=sale["user_id"],
-        user_name=sale.get("user_name", ""),
+        user_name=sale["user_name"] if sale["user_name"] else "",
         items=items,
         total=float(sale["total"]),
         payment_method=sale["payment_method"],

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pamvid - Tienda de Productos</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <!-- jsPDF para generar PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <header>
@@ -97,6 +100,9 @@
                         <option value="Deportes">Deportes</option>
                     </select>
                 </div>
+                <button id="add-selected-btn" class="btn-primary btn-add-selected">
+                    ✅ Agregar Seleccionados al Carrito
+                </button>
             </div>
             
             <div id="loading" class="loading">Cargando productos...</div>
@@ -408,37 +414,47 @@
         // Productos
         // =============================================
         async function loadProducts() {
+            setDebug('Cargando productos...');
             const loadingEl = document.getElementById('loading');
             const errorEl = document.getElementById('error');
             const gridEl = document.getElementById('products-grid');
 
             try {
+                setDebug('Fetching products from API...');
                 loadingEl.style.display = 'block';
                 errorEl.style.display = 'none';
                 gridEl.innerHTML = '';
 
                 const response = await fetch(`${API_BASE}/product-service/all`);
+                setDebug(`Response status: ${response.status}`);
 
                 if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
 
                 products = await response.json();
+                setDebug(`Recibidos ${products.length} productos`);
 
                 if (products.length === 0) {
                     gridEl.innerHTML = '<p class="no-products">No hay productos disponibles</p>';
                     loadingEl.style.display = 'none';
+                    setDebug('No hay productos');
                     return;
                 }
 
-                products.forEach(product => gridEl.appendChild(createProductCard(product)));
-                loadingEl.style.display = 'none';
-                attachEventListeners();
+                 products.forEach(product => {
+                     setDebug(`Creando tarjeta: ${product.name}`);
+                     gridEl.appendChild(createProductCard(product));
+                 });
+                 loadingEl.style.display = 'none';
+                 setDebug(`Mostrados ${products.length} productos`);
+                 attachEventListeners();
 
-            } catch (error) {
-                loadingEl.style.display = 'none';
-                errorEl.textContent = `Error al cargar productos: ${error.message}. Asegúrate de que los servicios estén activos.`;
-                errorEl.style.display = 'block';
-            }
-        }
+             } catch (error) {
+                 setDebug(`Error: ${error.message}`);
+                 loadingEl.style.display = 'none';
+                 errorEl.textContent = `Error al cargar productos: ${error.message}. Asegúrate de que los servicios estén activos.`;
+                 errorEl.style.display = 'block';
+             }
+         }
 
         function filterProducts() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
@@ -469,6 +485,9 @@
             card.innerHTML = `
                 <div class="product-image">
                     ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : '📦'}
+                </div>
+                <div class="product-select">
+                    <input type="checkbox" class="product-checkbox" data-id="${product.id}" data-name="${product.name}" data-price="${product.price}" ${product.stock <= 0 ? 'disabled' : ''}>
                 </div>
                 <h3>${product.name}</h3>
                 <div class="product-rating">${stars} <span>(${rating.toFixed(1)})</span></div>
@@ -513,6 +532,29 @@
             }
             updateCartDisplay();
             showToast(`"${productName}" agregado al carrito`, 'success');
+        }
+
+        // Agregar múltiples productos seleccionados
+        function addSelectedToCart() {
+            const checkboxes = document.querySelectorAll('.product-checkbox:checked');
+            if (checkboxes.length === 0) {
+                showToast('Selecciona al menos un producto', 'warning');
+                return;
+            }
+
+            let addedCount = 0;
+            checkboxes.forEach(checkbox => {
+                const productId = parseInt(checkbox.getAttribute('data-id'));
+                const productName = checkbox.getAttribute('data-name');
+                const productPrice = parseFloat(checkbox.getAttribute('data-price'));
+                const qtyInput = document.getElementById(`qty-${productId}`);
+                const quantity = qtyInput ? parseInt(qtyInput.value) : 1;
+
+                addToCart(productId, productName, productPrice, quantity);
+                addedCount++;
+            });
+
+            showToast(`${addedCount} producto(s) agregado(s) al carrito`, 'success');
         }
 
         function updateCartDisplay() {
@@ -632,6 +674,21 @@
             }, 4000);
         }
 
+        // Variable global para almacenar datos de la última venta
+        let lastSaleData = null;
+
+        // DEBUG: Mostrar estado en página
+        function setDebug(msg) {
+            let el = document.getElementById('debug-info');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'debug-info';
+                el.style.cssText = 'position:fixed;bottom:0;left:0;background:#333;color:#0f0;padding:5px;font-size:10px;z-index:9999;max-width:100%;overflow:auto;';
+                document.body.appendChild(el);
+            }
+            el.textContent = msg;
+        }
+
         // =============================================
         // FIX 4: processCheckout usa currentUser.id y envía el JWT
         // =============================================
@@ -641,11 +698,11 @@
             console.log('currentUser:', currentUser);
             console.log('authToken:', authToken);
             console.log('user-id input value:', document.getElementById('user-id').value);
-            
+
             const userId = currentUser ? currentUser.id : parseInt(document.getElementById('user-id').value);
             const userName = currentUser ? (currentUser.name || currentUser.name) : '';
             console.log('userId:', userId, 'userName:', userName);
-            
+
             const paymentMethod = document.getElementById('payment-method').value;
             const resultEl = document.getElementById('checkout-result');
             const checkoutBtn = document.getElementById('checkout-btn');
@@ -691,11 +748,22 @@
 
                 const saleResult = await response.json();
 
+                // Guardar datos para factura
+                lastSaleData = {
+                    sale: saleResult,
+                    userName: userName,
+                    paymentMethod: paymentMethod,
+                    cartSnapshot: [...cart]
+                };
+
                 resultEl.innerHTML = `
                     <p class="success">✅ Venta procesada exitosamente!</p>
                     <p>ID de Venta: ${saleResult.id}</p>
                     <p>Total: $${saleResult.total.toFixed(2)}</p>
                     <p>Estado: ${saleResult.status}</p>
+                    <button id="download-invoice-btn" class="btn-primary" style="margin-top: 15px; padding: 10px 20px; background-color: #28a745; border-color: #28a745;">
+                        📄 Descargar Factura
+                    </button>
                 `;
                 resultEl.className = 'checkout-result success';
                 resultEl.style.display = 'block';
@@ -703,6 +771,24 @@
                 cart = [];
                 updateCartDisplay();
                 loadProducts();
+
+                // FIX 8: Adjuntar event listener al botón de descarga
+                const downloadBtn = document.getElementById('download-invoice-btn');
+                if (downloadBtn) {
+                    downloadBtn.onclick = function(e) {
+                        e.preventDefault();
+                        if (lastSaleData) {
+                            generateAndDownloadInvoice(
+                                lastSaleData.sale,
+                                lastSaleData.userName,
+                                lastSaleData.paymentMethod,
+                                lastSaleData.cartSnapshot
+                            );
+                        } else {
+                            showToast('No hay factura disponible', 'error');
+                        }
+                    };
+                }
 
             } catch (error) {
                 resultEl.textContent = `Error: ${error.message}`;
@@ -715,78 +801,177 @@
         }
 
         // =============================================
-        // FIX 6: loadSalesHistory usa currentUser.id y envía el JWT
+        // FIX 7: Generar factura en PDF
         // =============================================
-        async function loadSalesHistory() {
-            const userId = currentUser ? currentUser.id : parseInt(document.getElementById('user-id').value);
-            const salesListEl = document.getElementById('sales-list');
+        function generateAndDownloadInvoice(sale, customerName, paymentMethod, originalCart) {
+            // Si no se pasan parámetros, usar lastSaleData
+            if (!sale && lastSaleData) {
+                sale = lastSaleData.sale;
+                customerName = lastSaleData.userName;
+                paymentMethod = lastSaleData.paymentMethod;
+                originalCart = lastSaleData.cartSnapshot;
+            }
 
-            if (!userId || userId <= 0) {
-                salesListEl.innerHTML = `
-                    <p class="error">Debes iniciar sesión para ver tu historial</p>
-                    <button id="load-sales-btn" class="btn-secondary">Reintentar</button>
-                `;
-                attachEventListeners();
-                openAuthModal();
+            if (!sale) {
+                showToast('No hay datos de venta para generar factura', 'error');
                 return;
             }
 
             try {
-                salesListEl.innerHTML = '<p>Cargando compras...</p>';
-
-                // FIX: enviar JWT en el header
-                const response = await fetch(`${API_BASE}/sales-service/all?user_id=${userId}`, {
-                    headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
-                });
-
-                if (!response.ok) throw new Error('Error al cargar historial');
-
-                const sales = await response.json();
-
-                if (sales.length === 0) {
-                    salesListEl.innerHTML = `
-                        <p>No tienes compras registradas aún.</p>
-                        <button id="load-sales-btn" class="btn-secondary">Actualizar</button>
-                    `;
-                    attachEventListeners();
+                const { jsPDF } = window.jspdf;
+                if (!jsPDF) {
+                    console.error('jsPDF no está cargado');
+                    showToast('Error al generar factura', 'error');
                     return;
                 }
 
-                salesListEl.innerHTML = '';
-                sales.forEach(sale => {
-                    const saleEl = document.createElement('div');
-                    saleEl.className = 'sale-item';
-                    // Formatear fecha legible
-                    const fecha = sale.created_at
-                        ? new Date(sale.created_at).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
-                        : 'Fecha desconocida';
-                    saleEl.innerHTML = `
-                        <p><strong>Venta #${sale.id}</strong> — ${fecha}</p>
-                        <p>Vendedor: ${sale.user_name || 'N/A'} | Total: $${sale.total.toFixed(2)} | Estado: <strong>${sale.status}</strong> | Pago: ${sale.payment_method}</p>
-                        <ul>
-                            ${sale.items.map(item => `
-                                <li>${item.product_name} × ${item.quantity} = $${item.subtotal.toFixed(2)}</li>
-                            `).join('')}
-                        </ul>
-                    `;
-                    salesListEl.appendChild(saleEl);
+                // Crear documento PDF
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const margin = 20;
+                const contentWidth = pageWidth - margin * 2;
+                let y = 20;
+
+                // Función para agregar texto con salto de línea automático
+                function addText(text, size = 10, bold = false, color = '#000000') {
+                    doc.setFontSize(size);
+                    if (bold) doc.setFont(undefined, 'bold');
+                    else doc.setFont(undefined, 'normal');
+                    doc.setTextColor(color);
+                    doc.text(text, margin, y);
+                    y += size * 0.6; // Interlineado
+                }
+
+                function addLine() {
+                    doc.setDrawColor(100);
+                    doc.line(margin, y, pageWidth - margin, y);
+                    y += 5;
+                }
+
+                // Encabezado de la empresa
+                addText('🧡 PAMVID', 22, true, '#2c7be5');
+                addText('Sistema de Logística y Mensajería', 12, false, '#555555');
+                addText('Cali, Valle del Cauca, Colombia', 10, false, '#666666');
+                addText('WhatsApp: +57 300 123 4567', 10, false, '#666666');
+                addText('Email: info@pamvid.com', 10, false, '#666666');
+                addLine();
+                y += 10;
+
+                // Título de factura
+                addText('FACTURA DE VENTA', 18, true, '#2c7be5');
+                y += 5;
+
+                // Datos de la factura
+                addText(`Número: #${sale.id.toString().padStart(6, '0')}`, 10);
+                addText(`Fecha: ${new Date(sale.created_at).toLocaleDateString('es-CO', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}`, 10);
+                y += 5;
+                addLine();
+                y += 10;
+
+                // Datos del cliente
+                addText('DATOS DEL CLIENTE:', 12, true);
+                addText(`Nombre: ${customerName || 'N/A'}`, 10);
+                addText(`Usuario ID: ${sale.user_id}`, 10);
+                addText(`Método de pago: ${paymentMethod}`, 10);
+                y += 5;
+                addLine();
+                y += 10;
+
+                // Tabla de productos
+                addText('DETALLE DE PRODUCTOS:', 12, true);
+                y += 3;
+
+                // Construir datos de la tabla
+                const tableColumn = ['Producto', 'Cantidad', 'P. Unit.', 'Subtotal'];
+                const tableRows = [];
+
+                if (sale.items && Array.isArray(sale.items)) {
+                    sale.items.forEach(item => {
+                        tableRows.push([
+                            item.product_name.substring(0, 30),
+                            item.quantity.toString(),
+                            `$${item.unit_price.toFixed(2)}`,
+                            `$${item.subtotal.toFixed(2)}`
+                        ]);
+                    });
+                }
+
+                // Generar tabla
+                doc.autoTable({
+                    head: [tableColumn],
+                    body: tableRows,
+                    startY: y,
+                    margin: { left: margin, right: margin },
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [44, 123, 229],
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    styles: {
+                        fontSize: 9,
+                        cellPadding: 3,
+                        valign: 'middle'
+                    },
+                    columnStyles: {
+                        0: { cellWidth: contentWidth * 0.4 },
+                        1: { cellWidth: contentWidth * 0.15, halign: 'center' },
+                        2: { cellWidth: contentWidth * 0.2, halign: 'right' },
+                        3: { cellWidth: contentWidth * 0.25, halign: 'right' }
+                    }
                 });
 
-                const updateBtn = document.createElement('button');
-                updateBtn.id = 'load-sales-btn';
-                updateBtn.className = 'btn-secondary';
-                updateBtn.textContent = 'Actualizar';
-                salesListEl.appendChild(updateBtn);
-                attachEventListeners();
-                showToast(`${sales.length} compra(s) cargada(s)`, 'success');
+                y = doc.lastAutoTable.finalY + 10;
+
+                // Calcular subtotales si se quiere desglosar envío
+                const itemsTotal = sale.items.reduce((sum, item) => sum + item.subtotal, 0);
+                const shipping = Math.max(0, sale.total - itemsTotal);
+                const subtotal = itemsTotal;
+
+                // Totales
+                addText('RESUMEN:', 12, true);
+                addText(`Subtotal: $${subtotal.toFixed(2)}`);
+                if (shipping > 0) {
+                    addText(`Envío: $${shipping.toFixed(2)}`);
+                }
+                addText(`TOTAL: $${sale.total.toFixed(2)}`, 11, true);
+                y += 5;
+                addLine();
+                y += 10;
+
+                // Estado y forma de pago
+                addText(`Estado: ${sale.status}`, 10);
+                addText(`Forma de pago: ${paymentMethod}`, 10);
+                y += 10;
+
+                // Pie de página
+                doc.setFontSize(8);
+                doc.setTextColor(100);
+                doc.text(
+                    'Gracias por confiar en Pamvid. Para cualquier inquietud, contactarnos.',
+                    margin,
+                    doc.internal.pageSize.getHeight() - 20
+                );
+                doc.text(
+                    `Factura generada el ${new Date().toLocaleString('es-CO')}`,
+                    margin,
+                    doc.internal.pageSize.getHeight() - 10
+                );
+
+                // Descargar PDF
+                const fileName = `Factura_Pamvid_${sale.id}_${new Date().toISOString().slice(0,10)}.pdf`;
+                doc.save(fileName);
+                showToast(`📄 Factura ${fileName} descargada`, 'success');
 
             } catch (error) {
-                salesListEl.innerHTML = `
-                    <p class="error">Error: ${error.message}</p>
-                    <button id="load-sales-btn" class="btn-secondary">Reintentar</button>
-                `;
-                attachEventListeners();
-                showToast('Error al cargar compras', 'error');
+                console.error('Error generando PDF:', error);
+                showToast('Error al generar la factura PDF', 'error');
             }
         }
 
@@ -804,11 +989,23 @@
                     const qtyInput = document.getElementById('qty-' + productId);
                     const qty = qtyInput ? parseInt(qtyInput.value) : 1;
                     addToCart(parseInt(productId), productName, parseFloat(productPrice), qty);
+                    // También marcar el checkbox si existe
+                    const checkbox = document.querySelector(`.product-checkbox[data-id="${productId}"]`);
+                    if (checkbox) checkbox.checked = true;
                     const original = btn.textContent;
                     btn.textContent = '✓ Agregado!';
                     setTimeout(() => { btn.textContent = original; }, 1000);
                 };
             });
+
+            // Botón agregar seleccionados
+            const addSelectedBtn = document.getElementById('add-selected-btn');
+            if (addSelectedBtn) {
+                addSelectedBtn.onclick = function(e) {
+                    e.preventDefault();
+                    addSelectedToCart();
+                };
+            }
 
             // Botones cantidad en tarjetas de producto
             document.querySelectorAll('.btn-minus').forEach(btn => {
